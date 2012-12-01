@@ -405,22 +405,69 @@ int main_learn(int argc, char *argv[], const char *argv0)
 
     /* Set callback procedures that receive messages and taggers. */
     trainer->set_message_callback(trainer, NULL, message_callback);
-
+    
     /* Start training. */
     if (opt.cross_validation) {
+        /* Inject our own eval instance. */
+        crfsuite_evaluation_t eval;
+        crfsuite_evaluation_t acc_eval;
+        /* Initialize the evaluation table. */
+        crfsuite_evaluation_init(&acc_eval, data.labels->num(data.labels));
+        trainer->inject_eval(trainer, &eval);
+        float total_macro_fmeasure = 0.0f;
         for (i = 0;i < groups;++i) {
             fprintf(fpo, "===== Cross validation (%d/%d) =====\n", i+1, groups);
             if (ret = trainer->train(trainer, &data, "", i)) {
+                fprintf(fpo, "===== Forced exit! =====\n");
                 goto force_exit;
             }
-            fprintf(fpo, "\n");
+            assert(acc_eval.num_labels == eval.num_labels);
+            for (int labelIdx = 0;labelIdx <= acc_eval.num_labels;++labelIdx) {            
+                acc_eval.tbl[labelIdx].num_observation += eval.tbl[labelIdx].num_observation;
+                acc_eval.tbl[labelIdx].num_model += eval.tbl[labelIdx].num_model;
+                acc_eval.tbl[labelIdx].num_correct += eval.tbl[labelIdx].num_correct;
+            }
+            acc_eval.item_total_num += eval.item_total_num;
+            acc_eval.inst_total_correct += eval.inst_total_correct;
+            acc_eval.inst_total_num += eval.inst_total_num;
         }
+        crfsuite_evaluation_finalize(&acc_eval);
+
+        const char *lstr = NULL;
+        fprintf(fpo, "X-Eval Performance by label (#match, #model, #ref) (precision, recall, F1):\n");
+
+        for (i = 0;i < acc_eval.num_labels;++i) {
+            const crfsuite_label_evaluation_t* lev = &acc_eval.tbl[i];
+
+            data.labels->to_string(data.labels, i, &lstr);
+            if (lstr == NULL) lstr = "[UNKNOWN]";
+
+            if (lev->num_observation == 0) {
+                fprintf(fpo, "    %s: (%d, %d, %d) (******, ******, ******)\n",
+                    lstr, lev->num_correct, lev->num_model, lev->num_observation
+                    );
+            } else {
+                fprintf(fpo, "    %s: (%d, %d, %d) (%1.4f, %1.4f, %1.4f)\n",
+                    lstr, lev->num_correct, lev->num_model, lev->num_observation,
+                    lev->precision, lev->recall, lev->fmeasure
+                    );
+            }
+            data.labels->free(labels, lstr);
+        }
+        fprintf(fpo, "X-Eval Macro-average precision, recall, F1: (%f, %f, %f)\n",
+            acc_eval.macro_precision, acc_eval.macro_recall, acc_eval.macro_fmeasure
+            );
+        fprintf(fpo, "X-Eval Item accuracy: %d / %d (%1.4f)\n",
+            acc_eval.item_total_correct, acc_eval.item_total_num, acc_eval.item_accuracy
+            );
+        fprintf(fpo, "X-Eval Instance accuracy: %d / %d (%1.4f)\n",
+            acc_eval.inst_total_correct, acc_eval.inst_total_num, acc_eval.inst_accuracy
+            );
 
     } else {
         if (ret = trainer->train(trainer, &data, opt.model, opt.holdout)) {
             goto force_exit;
         }
-
     }
 
     /* Log the end time. */

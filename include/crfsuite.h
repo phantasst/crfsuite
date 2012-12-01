@@ -377,6 +377,13 @@ struct tag_crfsuite_trainer {
     void (*set_message_callback)(crfsuite_trainer_t* trainer, void *user, crfsuite_logging_callback cbm);
 
     /**
+     * Inject eval instance.
+     *  @param  trainer     The pointer to this trainer instance.
+     *  @param  eval         The pointer to the eval instance.
+     */
+    void (*inject_eval)(crfsuite_trainer_t* trainer, crfsuite_evaluation_t* eval);
+
+    /**
      * Start a training process.
      *  @param  trainer     The pointer to this trainer instance.
      *  @param  data        The poiinter to the data set.
