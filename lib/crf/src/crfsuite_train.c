@@ -113,6 +113,12 @@ static void crfsuite_train_set_message_callback(crfsuite_trainer_t* self, void *
     tr->lg->instance = instance;
 }
 
+static void crfsuite_train_inject_eval(crfsuite_trainer_t* self, crfsuite_evaluation_t* eval)
+{
+    crfsuite_train_internal_t *tr = (crfsuite_train_internal_t*)self->internal;
+    tr->lg->eval = eval;
+}
+
 static crfsuite_params_t* crfsuite_train_params(crfsuite_trainer_t* self)
 {
     crfsuite_train_internal_t *tr = (crfsuite_train_internal_t*)self->internal;
@@ -257,6 +263,7 @@ int crf1de_create_instance(const char *interface, void **ptr)
                 trainer->release = crfsuite_train_release;
                 trainer->params = crfsuite_train_params;
                 trainer->set_message_callback = crfsuite_train_set_message_callback;
+                trainer->inject_eval = crfsuite_train_inject_eval;
                 trainer->train = crfsuite_train_train;
 
                 *ptr = trainer;
