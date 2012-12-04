@@ -176,6 +176,14 @@ void holdout_evaluation(
     const floatval_t *w,
     logging_t *lg
     );
+
+void holdout_evaluation_arg(
+    crfsuite_evaluation_t *eval,
+    encoder_t *gm,
+    dataset_t *testset,
+    const floatval_t *w,
+    logging_t *lg
+    );
     
 int crfsuite_train_lbfgs(
     encoder_t *gm,
