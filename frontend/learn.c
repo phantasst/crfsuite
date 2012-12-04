@@ -30,6 +30,8 @@
 
 /* $Id$ */
 
+#include <assert.h>
+
 #include <os.h>
 
 #include <stdio.h>
